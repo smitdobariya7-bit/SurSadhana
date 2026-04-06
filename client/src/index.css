@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 15 15 15;
+    --foreground: 250 250 250;
+    --card: 20 20 20;
+    --card-foreground: 250 250 250;
+    --popover: 20 20 20;
+    --popover-foreground: 250 250 250;
+    --primary: 245 158 11;
+    --primary-foreground: 15 15 15;
+    --secondary: 251 191 36;
+    --secondary-foreground: 15 15 15;
+    --muted: 38 38 38;
+    --muted-foreground: 163 163 163;
+    --accent: 245 158 11;
+    --accent-foreground: 15 15 15;
+    --destructive: 239 68 68;
+    --destructive-foreground: 250 250 250;
+    --border: 38 38 38;
+    --input: 38 38 38;
+    --ring: 245 158 11;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+ * {
+    border-color: rgba(255,255,255,0.1);
+}
+body {
+    background: #0f0f0f;
+    color: white;
+    font-family: Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Roboto",sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+  input,
+  textarea,
+  select {
+    color-scheme: dark;
+  }
+
+  select option {
+    background-color: #1f1f1f;
+    color: #f5f5f5;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(1) opacity(0.85);
+    cursor: pointer;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .gradient-saffron {
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  }
+  
+  .gradient-radial {
+    background: radial-gradient(circle at center, rgba(245, 158, 11, 0.1) 0%, transparent 70%);
+  }
+
+  .glassmorphism {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .glassmorphism {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
