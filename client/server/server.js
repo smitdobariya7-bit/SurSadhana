@@ -25,7 +25,10 @@ const UserSchema = new mongoose.Schema({
 }, { timestamps: true });
 const User = mongoose.model('User', UserSchema);
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  console.warn('WARNING: JWT_SECRET not set in environment. Using development default. This must be set in production!');
+  return 'dev-secret-change-in-production';
+})();
 const sign = (u) => jwt.sign({ uid: u._id, email: u.email }, JWT_SECRET, { expiresIn: '7d' });
 const auth = async (req, res, next) => {
   try {

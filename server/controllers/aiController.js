@@ -1,7 +1,5 @@
 import dotenv from "dotenv";
 import Groq from "groq-sdk";
-import fs from "fs";
-import path from "path";
 import User from "../models/User.js";
 
 dotenv.config();
@@ -18,21 +16,7 @@ if (process.env.GROQ_API_KEY) {
   console.warn('GROQ_API_KEY not set — AI endpoints will be disabled until a key is provided.');
 }
 
-// Helper: try to read OpenAI key from client/.env as a fallback (quick dev convenience)
-const readClientOpenAIKey = () => {
-  try {
-    const clientEnvPath = path.resolve(process.cwd(), '..', 'client', '.env');
-    if (!fs.existsSync(clientEnvPath)) return null;
-    const content = fs.readFileSync(clientEnvPath, 'utf8');
-    const match = content.match(/^VITE_OPENAI_API_KEY=(.+)$/m);
-    if (match) return match[1].trim();
-    return null;
-  } catch (e) {
-    return null;
-  }
-};
-
-const OPENAI_KEY_FALLBACK = readClientOpenAIKey();
+// OpenAI configuration - only use server-side API key
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const DEFAULT_GROQ_MODELS = [
   process.env.GROQ_MODEL,
@@ -42,7 +26,10 @@ const DEFAULT_GROQ_MODELS = [
 ].filter(Boolean);
 
 const callOpenAI = async (message) => {
-  const openaiKey = process.env.OPENAI_API_KEY || OPENAI_KEY_FALLBACK;
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) {
+    throw new Error('OpenAI API key not configured. Set OPENAI_API_KEY environment variable.');
+  }
   const resp = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -79,8 +66,13 @@ const getTextCompletion = async (message) => {
       }
     }
 
-    if (process.env.OPENAI_API_KEY || OPENAI_KEY_FALLBACK) {
-      return callOpenAI(message);
+    // Fall back to OpenAI if available
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        return await callOpenAI(message);
+      } catch (openaiErr) {
+        console.warn("OpenAI fallback failed:", openaiErr?.message || openaiErr);
+      }
     }
 
     throw lastGroqError || new Error("No text model available");
@@ -109,7 +101,7 @@ const transcribeAudio = async (audioBuffer, filename, mimeType) => {
     }
   }
 
-  const openaiKey = process.env.OPENAI_API_KEY || OPENAI_KEY_FALLBACK;
+  const openaiKey = process.env.OPENAI_API_KEY;
   if (!openaiKey) {
     throw new Error("Transcription service not configured. Set GROQ_API_KEY or OPENAI_API_KEY.");
   }
@@ -117,7 +109,7 @@ const transcribeAudio = async (audioBuffer, filename, mimeType) => {
   const formData = new FormData();
   const audioBlob = new Blob([audioBuffer], { type: safeMimeType });
   formData.append("file", audioBlob, safeFilename);
-  formData.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe");
+  formData.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || "whisper-1");
 
   const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
     method: "POST",

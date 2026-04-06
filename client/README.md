@@ -49,33 +49,12 @@ npm install
 Create a `.env` file in the root directory:
 
 ```env
-# Server Configuration
-PORT=5000
-NODE_ENV=development
+# Frontend Configuration
+VITE_API_BASE_URL=http://localhost:5000
 
-# Database
-MONGODB_URI=mongodb://localhost:27017/sursadhana
-
-# JWT Secret (change this in production!)
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-
-# OpenAI API Key (for AI Guru features)
-OPENAI_API_KEY=your-openai-api-key
-VITE_OPENAI_API_KEY=your-openai-api-key
-
-# Stripe (for payments - optional)
-STRIPE_SECRET_KEY=your-stripe-secret-key
-STRIPE_PUBLISHABLE_KEY=your-stripe-publishable-key
-STRIPE_WEBHOOK_SECRET=your-stripe-webhook-secret
-
-# Email Configuration (for notifications - optional)
-EMAIL_SERVICE=gmail
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASS=your-email-password
-
-# File Upload
-UPLOAD_PATH=./uploads
-MAX_FILE_SIZE=10485760
+# Note: Never add API keys or secrets to the frontend .env file.
+# All sensitive keys (OpenAI, Stripe, JWT Secret, etc.) should be in the backend .env file.
+# See server/.env.example for backend configuration.
 ```
 
 ### 3. Database Setup

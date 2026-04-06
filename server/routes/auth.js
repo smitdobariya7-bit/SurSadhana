@@ -17,7 +17,10 @@ router.get('/me', async (req, res) => {
     }
 
     // 2. Token ko verify karo
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_default_secret');
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // 3. Database se user dhundo, password field ko hatao
     const user = await User.findById(decoded.userId).select('-password');
@@ -59,9 +62,13 @@ router.post('/register', async (req, res) => {
       userId: user.id,
     };
 
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET || 'your_default_secret',
+      process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
@@ -98,9 +105,13 @@ router.post('/login', async (req, res) => {
       userId: user.id,
     };
 
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
     const token = jwt.sign(
       payload,
-      process.env.JWT_SECRET || 'your_default_secret',
+      process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
