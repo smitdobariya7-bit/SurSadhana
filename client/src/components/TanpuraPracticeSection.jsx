@@ -17,15 +17,26 @@ const TanpuraPracticeSection = ({ onPracticeTick, totalPracticeSeconds = 0 }) =>
 
   const scales = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-  // explicit filename mapping when filenames differ from scale labels
+  // explicit filename mapping: scale names to actual filenames
   const explicitFiles = {
-    E: 'E.mp3',
-    F: 'F.mp3',
+    'C': 'C.mp3',
+    'C#': 'C1.mp3',
+    'D': 'D.mp3',
+    'D#': 'D1.mp3',
+    'E': 'E.mp3',
+    'F': 'F.mp3',
+    'F#': 'F1.mp3',
+    'G': 'G.mp3',
+    'G#': 'G1.mp3',
+    'A': 'A.mp3',
+    'A#': 'A1.mp3',
+    'B': 'B.mp3',
   };
 
 
 const handlePlayPause = () => {
   if (!isPlaying) {
+    setIsPlaying(true);
     createAndPlay(scale);
   } else {
     stopAudio();
@@ -83,58 +94,19 @@ const createAndPlay = async (whichScale) => {
     // ignore
   }
 
-  // first try explicit mapping (useful when files are named differently)
+  // first try explicit mapping (direct mapping to actual file names)
   let url = null;
-  if (explicitFiles[whichScale]) {
-    const explicitUrl = `/tanpura/${explicitFiles[whichScale]}`;
-    try {
-      const resHead = await fetch(explicitUrl, { method: 'HEAD' });
-      if (resHead && resHead.ok) {
-        url = explicitUrl;
-      }
-    } catch (e) {
-      try {
-        const resGet = await fetch(explicitUrl, { method: 'GET' });
-        if (resGet && resGet.ok) url = explicitUrl;
-      } catch (e2) {
-        // ignore
-      }
-    }
-  }
-
-  // fallback: try a few filename variants — original (encoded), '#' replaced with '1', 'sharp', and raw
-  if (!url) {
-    const candidates = [];
-    candidates.push(`/tanpura/${encodeURIComponent(whichScale)}.mp3`);
-    if (whichScale.includes('#')) {
-      candidates.push(`/tanpura/${whichScale.replace('#', '1')}.mp3`);
-      candidates.push(`/tanpura/${whichScale.replace('#', 'sharp')}.mp3`);
-    }
-    candidates.push(`/tanpura/${whichScale}.mp3`);
-    console.debug('Tanpura: candidate URLs', candidates);
-
-    for (const c of candidates) {
-      try {
-        let res = await fetch(c, { method: 'HEAD' });
-        if (!res || !res.ok) {
-          res = await fetch(c, { method: 'GET' });
-        }
-        if (res && res.ok) {
-          url = c;
-          break;
-        }
-      } catch (err) {
-        // ignore
-      }
-    }
+  const fileName = explicitFiles[whichScale];
+  if (fileName) {
+    url = `/tanpura/${fileName}`;
   }
 
   if (!url) {
-    console.error('Tanpura: no file found for', whichScale, candidates);
-    toast({ title: 'File not found', description: `No tanpura file found for ${whichScale}` });
+    console.error('Tanpura: no mapping found for scale', whichScale);
+    toast({ title: 'Scale not found', description: `No tanpura file found for ${whichScale}` });
+    setIsPlaying(false);
     return;
   }
-  console.debug('Tanpura: attempting to play', url);
 
   if (audioRef.current) {
     audioRef.current.pause();
@@ -158,7 +130,6 @@ const createAndPlay = async (whichScale) => {
   const playPromise = audio.play();
   if (playPromise && typeof playPromise.then === 'function') {
     playPromise.then(() => {
-      setIsPlaying(true);
       if (practiceTimerRef.current) {
         clearInterval(practiceTimerRef.current);
       }
@@ -167,10 +138,10 @@ const createAndPlay = async (whichScale) => {
       }, 1000);
     }).catch((err) => {
       console.warn('Tanpura play() rejected', err);
+      setIsPlaying(false);
       toast({ title: 'Playback blocked', description: 'User interaction may be required to start audio.' });
     });
   } else {
-    setIsPlaying(true);
     if (practiceTimerRef.current) {
       clearInterval(practiceTimerRef.current);
     }
@@ -198,8 +169,12 @@ useEffect(() => {
   const onKey = (e) => {
     if (e.code === 'Space') {
       e.preventDefault();
-      if (isPlaying) stopAudio();
-      else createAndPlay(scale);
+      if (isPlaying) {
+        stopAudio();
+      } else {
+        setIsPlaying(true);
+        createAndPlay(scale);
+      }
     }
   };
   window.addEventListener('keydown', onKey);
