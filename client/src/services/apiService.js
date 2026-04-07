@@ -1,6 +1,11 @@
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL)
-  ? `${import.meta.env.VITE_API_BASE_URL}/api`
-  : 'http://localhost:5000/api';
+import { getApiBaseUrl, getApiBaseUrlError } from '@/lib/apiBaseUrl';
+
+const baseUrlError = getApiBaseUrlError();
+if (baseUrlError) {
+  console.error(baseUrlError);
+}
+
+const API_BASE_URL = `${getApiBaseUrl()}/api`;
 
 class ApiService {
   constructor() {
@@ -16,6 +21,11 @@ class ApiService {
   }
 
   async request(endpoint, options = {}) {
+    const configError = getApiBaseUrlError();
+    if (configError) {
+      throw new Error(configError);
+    }
+
     const url = `${this.baseURL}${endpoint}`;
     const config = {
       headers: this.getAuthHeaders(),

@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 
-const AI_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL)
-  ? import.meta.env.VITE_API_BASE_URL
-  : 'http://localhost:5000';
+import { getApiBaseUrl } from '@/lib/apiBaseUrl';
+
+const AI_BASE_URL = getApiBaseUrl();
 
 const AITrainerPage = () => {
   const [input, setInput] = useState('');

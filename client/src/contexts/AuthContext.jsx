@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getApiBaseUrl, getApiBaseUrlError } from '@/lib/apiBaseUrl';
 
 const AuthContext = createContext();
 
@@ -44,7 +45,7 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
         return;
       }
-      const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+      const base = getApiBaseUrl();
       const response = await fetch(`${base}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -69,7 +70,12 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (email, password, name) => {
     try {
-      const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+      const configError = getApiBaseUrlError();
+      if (configError) {
+        throw new Error(configError);
+      }
+
+      const base = getApiBaseUrl();
       const response = await fetch(`${base}/api/auth/register`, {
         method: 'POST',
         headers: {
@@ -101,7 +107,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+      const configError = getApiBaseUrlError();
+      if (configError) {
+        throw new Error(configError);
+      }
+
+      const base = getApiBaseUrl();
       const response = await fetch(`${base}/api/auth/login`, {
         method: 'POST',
         headers: {
