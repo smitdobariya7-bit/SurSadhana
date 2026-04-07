@@ -36,21 +36,41 @@ const TanpuraPracticeSection = ({ onPracticeTick, totalPracticeSeconds = 0 }) =>
 
 const handlePlayPause = () => {
   if (!isPlaying) {
-    setIsPlaying(true);
-    createAndPlay(scale);
+    // If audio exists for current scale, resume it instead of creating new
+    if (audioRef.current && audioRef.current.src && audioRef.current.src.includes(`/${explicitFiles[scale]}`)) {
+      audioRef.current.play().then(() => {
+        if (practiceTimerRef.current) clearInterval(practiceTimerRef.current);
+        practiceTimerRef.current = setInterval(() => onPracticeTick?.(1), 1000);
+      }).catch(() => {
+        setIsPlaying(false);
+      });
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(true);
+      createAndPlay(scale);
+    }
   } else {
-    stopAudio();
+    if (audioRef.current) audioRef.current.pause();
+    if (practiceTimerRef.current) {
+      clearInterval(practiceTimerRef.current);
+      practiceTimerRef.current = null;
+    }
+    setIsPlaying(false);
   }
 };
 
 const handleScaleChange = (newScale) => {
   setScale(newScale);
-
+  
   if (audioRef.current) {
     audioRef.current.pause();
-    audioRef.current.currentTime = 0;
+    if (practiceTimerRef.current) {
+      clearInterval(practiceTimerRef.current);
+      practiceTimerRef.current = null;
+    }
   }
-
+  
+  setIsPlaying(true);
   createAndPlay(newScale);
 };
 
@@ -77,41 +97,30 @@ useEffect(() => {
 }, []);
 
 // helpers: create, play, stop with logging and error handling
-const createAndPlay = async (whichScale) => {
+const createAndPlay = (whichScale) => {
   // try to unlock/resume AudioContext on first user gesture
   try {
     if (!audioContextRef.current) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (Ctx) {
         audioContextRef.current = new Ctx();
-        // resume must be called in a user gesture; this is invoked from click handlers
-        audioContextRef.current.resume().catch(() => {
-          // ignore resume failures; playback may still be blocked
-        });
+        audioContextRef.current.resume().catch(() => {});
       }
     }
-  } catch (e) {
-    // ignore
-  }
+  } catch (e) {}
 
-  // first try explicit mapping (direct mapping to actual file names)
-  let url = null;
   const fileName = explicitFiles[whichScale];
-  if (fileName) {
-    url = `/tanpura/${fileName}`;
-  }
-
-  if (!url) {
+  if (!fileName) {
     console.error('Tanpura: no mapping found for scale', whichScale);
     toast({ title: 'Scale not found', description: `No tanpura file found for ${whichScale}` });
     setIsPlaying(false);
     return;
   }
 
+  const url = `/tanpura/${fileName}`;
+
   if (audioRef.current) {
     audioRef.current.pause();
-    audioRef.current.currentTime = 0;
-    audioRef.current = null;
   }
 
   const audio = new Audio(url);
@@ -122,6 +131,7 @@ const createAndPlay = async (whichScale) => {
   const onError = (e) => {
     console.error('Tanpura audio error for', url, e);
     toast({ title: 'Audio load error', description: `Failed to load ${whichScale}` });
+    setIsPlaying(false);
   };
 
   audio.addEventListener('error', onError);
@@ -169,12 +179,7 @@ useEffect(() => {
   const onKey = (e) => {
     if (e.code === 'Space') {
       e.preventDefault();
-      if (isPlaying) {
-        stopAudio();
-      } else {
-        setIsPlaying(true);
-        createAndPlay(scale);
-      }
+      handlePlayPause();
     }
   };
   window.addEventListener('keydown', onKey);
