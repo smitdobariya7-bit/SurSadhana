@@ -14,6 +14,8 @@ import { fileURLToPath } from 'url';
 dotenv.config();
 
 
+const cors = require("cors");
+app.use(cors());
 
 const app = express();
 // Middleware
