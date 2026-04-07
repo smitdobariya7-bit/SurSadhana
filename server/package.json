@@ -2,6 +2,7 @@
   "name": "sursadhana-api",
   "version": "1.0.0",
   "description": "Node.js REST API using Express and MongoDB",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

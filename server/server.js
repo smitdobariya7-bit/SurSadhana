@@ -6,18 +6,16 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import practiceRoutes from './routes/practice.js';
 import subscriptionRoutes from './routes/subscription.js';
-import aiRoutes from "./routes/aiRoutes.js";
+import aiRoutes from './routes/aiRoutes.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 // import authRoutes from './routes/authRoutes.js'; 
 
 dotenv.config();
 
-
-const cors = require("cors");
-app.use(cors());
-
 const app = express();
+
 // Middleware
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(express.json({ limit: '25mb' }));
