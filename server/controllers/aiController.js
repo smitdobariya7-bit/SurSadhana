@@ -156,22 +156,22 @@ const parseModelJson = (text) => {
   }
 };
 
-const sanitizeHistory = (messages = []) => {
-  if (!Array.isArray(messages)) return [];
-  return messages
-    .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-    .map((m) => ({
-      role: m.role,
-      content: m.content.trim().slice(0, 8000),
-      createdAt: m.createdAt ? new Date(m.createdAt) : new Date(),
-      meta: {
-        related_raag: typeof m.meta?.related_raag === 'string' ? m.meta.related_raag.slice(0, 200) : '',
-        practice_tip: typeof m.meta?.practice_tip === 'string' ? m.meta.practice_tip.slice(0, 500) : '',
-        difficulty_level: typeof m.meta?.difficulty_level === 'string' ? m.meta.difficulty_level.slice(0, 50) : ''
-      }
-    }))
-    .filter((m) => m.content.length > 0)
-    .slice(-200);
+const formatResponse = (content) => {
+  if (!content) return content;
+
+  // Ensure proper line breaks and spacing
+  let formatted = content
+    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
+    .replace(/^\s+|\s+$/g, '') // Trim whitespace
+    .replace(/\n\s*\n/g, '\n\n'); // Consistent paragraph spacing
+
+  // Ensure bullet points have proper spacing
+  formatted = formatted.replace(/(\n?)(•|\*|\-)\s*/g, '\n• ');
+
+  // Ensure numbered lists have proper spacing
+  formatted = formatted.replace(/(\n?)(\d+\.)\s*/g, '\n$2 ');
+
+  return formatted;
 };
 
 const extractRequestedLanguage = (question = '') => {
@@ -273,6 +273,15 @@ Mandatory rules:
    - If user writes in English, reply in English.
 7) Give practical, clear, structured guidance. Avoid generic filler.
 8) Never switch language unless user asks.
+9) Format responses for maximum readability:
+   - Use short paragraphs (2-4 sentences each)
+   - Use bullet points (•) for lists and steps
+   - Use numbered lists (1., 2., 3.) for sequences
+   - Use bold text with **asterisks** for emphasis
+   - Break down complex ideas into simple steps
+   - Use clear headings like "Practice Plan:" or "Key Points:"
+   - Keep explanations simple and actionable
+   - Avoid long blocks of text without breaks
 
 User question:
 """${question}"""
@@ -317,8 +326,8 @@ export const askAI = async (req, res) => {
         console.warn('Multilingual refusal generation failed:', refusalError?.message || refusalError);
       }
       return res.json({
-        reply: refusal,
-        answer: refusal,
+        reply: formatResponse(refusal),
+        answer: formatResponse(refusal),
         related_raag: '',
         practice_tip: '',
         difficulty_level: 'Beginner'
@@ -350,9 +359,10 @@ export const askAI = async (req, res) => {
     }
 
     const content = completion.choices[0].message.content;
+    const formattedContent = formatResponse(content);
     res.json({
-      reply: content,
-      answer: content,
+      reply: formattedContent,
+      answer: formattedContent,
       related_raag: '',
       practice_tip: '',
       difficulty_level: 'Beginner'
