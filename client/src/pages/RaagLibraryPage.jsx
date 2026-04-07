@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { motion } from 'framer-motion';
-import { Search } from 'lucide-react';
+import { Search, Globe } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import RaagCard from '@/components/RaagCard';
+import { NotationProvider, useNotationMode } from '@/contexts/NotationContext';
 
-const RaagLibraryPage = () => {
+const RaagLibraryContent = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedThaat, setSelectedThaat] = useState('All');
+  const { mode, setMode } = useNotationMode();
 
   const raags = [
     {
@@ -159,6 +162,49 @@ const RaagLibraryPage = () => {
             </p>
           </motion.div>
 
+          {/* Notation Mode Toggle */}
+          <div className="flex justify-center gap-2 mb-8">
+            <div className="flex items-center gap-2 bg-white/5 p-1 rounded-lg border border-white/10">
+              <Globe className="h-4 w-4 text-amber-500 ml-2" />
+              <Button
+                onClick={() => setMode('english')}
+                variant={mode === 'english' ? 'default' : 'ghost'}
+                size="sm"
+                className={`rounded ${
+                  mode === 'english'
+                    ? 'gradient-saffron text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                English
+              </Button>
+              <Button
+                onClick={() => setMode('hindi')}
+                variant={mode === 'hindi' ? 'default' : 'ghost'}
+                size="sm"
+                className={`rounded ${
+                  mode === 'hindi'
+                    ? 'gradient-saffron text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                हिंदी
+              </Button>
+              <Button
+                onClick={() => setMode('both')}
+                variant={mode === 'both' ? 'default' : 'ghost'}
+                size="sm"
+                className={`rounded ${
+                  mode === 'both'
+                    ? 'gradient-saffron text-white'
+                    : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                Both
+              </Button>
+            </div>
+          </div>
+
           {/* Search and Filter */}
           <div className="mb-8 space-y-4">
             <div className="relative max-w-2xl mx-auto">
@@ -204,6 +250,18 @@ const RaagLibraryPage = () => {
         </div>
       </div>
     </>
+  );
+};
+
+const RaagLibraryPage = () => {
+  return (
+    <NotationProvider>
+      <Helmet>
+        <title>Raag Library - SurSadhana</title>
+        <meta name="description" content="Comprehensive library of Hindustani classical raags with detailed information on aaroh, avaroh, pakad, mood, and timing." />
+      </Helmet>
+      <RaagLibraryContent />
+    </NotationProvider>
   );
 };
 

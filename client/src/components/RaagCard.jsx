@@ -9,8 +9,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useNotationMode } from '@/contexts/NotationContext';
+import { convertNotationString } from '@/lib/notationHelper';
 
 const RaagCard = ({ name, thaat, aaroh, avaroh, pakad, mood, time, examples, index }) => {
+  const { mode } = useNotationMode();
+
+  // Convert notations based on current mode
+  const displayAaroh = convertNotationString(aaroh, mode);
+  const displayAvaroh = convertNotationString(avaroh, mode);
+  const displayPakad = convertNotationString(pakad, mode);
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -28,15 +36,15 @@ const RaagCard = ({ name, thaat, aaroh, avaroh, pakad, mood, time, examples, ind
       <div className="space-y-3 mb-4">
         <div>
           <p className="text-gray-400 text-sm mb-1">Aaroh (Ascending)</p>
-          <p className="text-white font-mono">{aaroh}</p>
+          <p className="text-white font-mono text-sm break-words">{displayAaroh}</p>
         </div>
         <div>
           <p className="text-gray-400 text-sm mb-1">Avaroh (Descending)</p>
-          <p className="text-white font-mono">{avaroh}</p>
+          <p className="text-white font-mono text-sm break-words">{displayAvaroh}</p>
         </div>
         <div>
           <p className="text-gray-400 text-sm mb-1">Pakad</p>
-          <p className="text-white font-mono">{pakad}</p>
+          <p className="text-white font-mono text-sm break-words">{displayPakad}</p>
         </div>
       </div>
 
@@ -69,15 +77,15 @@ const RaagCard = ({ name, thaat, aaroh, avaroh, pakad, mood, time, examples, ind
             </div>
             <div>
               <h4 className="font-semibold text-amber-500 mb-2">Aaroh (Ascending Scale)</h4>
-              <p className="font-mono text-lg">{aaroh}</p>
+              <p className="font-mono text-lg break-words">{displayAaroh}</p>
             </div>
             <div>
               <h4 className="font-semibold text-amber-500 mb-2">Avaroh (Descending Scale)</h4>
-              <p className="font-mono text-lg">{avaroh}</p>
+              <p className="font-mono text-lg break-words">{displayAvaroh}</p>
             </div>
             <div>
               <h4 className="font-semibold text-amber-500 mb-2">Pakad (Characteristic Phrase)</h4>
-              <p className="font-mono text-lg">{pakad}</p>
+              <p className="font-mono text-lg break-words">{displayPakad}</p>
             </div>
             <div>
               <h4 className="font-semibold text-amber-500 mb-2">Mood/Rasa</h4>
