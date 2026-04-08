@@ -282,6 +282,15 @@ Mandatory rules:
    - Use clear headings like "Practice Plan:" or "Key Points:"
    - Keep explanations simple and actionable
    - Avoid long blocks of text without breaks
+10) Return ONLY valid JSON, with exactly two keys:
+    {
+      "english": "...",
+      "hindi": "..."
+    }
+    Do not include markdown or any extra text before or after the JSON.
+    Make the English answer simple and easy to read.
+    Make the Hindi answer clear and natural for Hindi speakers.
+    Provide both versions even if the question is already in one language.
 
 User question:
 """${question}"""
@@ -359,10 +368,28 @@ export const askAI = async (req, res) => {
     }
 
     const content = completion.choices[0].message.content;
+    const parsed = parseModelJson(content);
+    if (parsed && (typeof parsed.english === 'string' || typeof parsed.hindi === 'string')) {
+      const answerEn = formatResponse(parsed.english || parsed.hindi || content);
+      const answerHi = formatResponse(parsed.hindi || parsed.english || content);
+      const defaultAnswer = answerEn || answerHi;
+      return res.json({
+        reply: defaultAnswer,
+        answer: defaultAnswer,
+        answer_en: answerEn,
+        answer_hi: answerHi,
+        related_raag: '',
+        practice_tip: '',
+        difficulty_level: 'Beginner'
+      });
+    }
+
     const formattedContent = formatResponse(content);
     res.json({
       reply: formattedContent,
       answer: formattedContent,
+      answer_en: formattedContent,
+      answer_hi: formattedContent,
       related_raag: '',
       practice_tip: '',
       difficulty_level: 'Beginner'

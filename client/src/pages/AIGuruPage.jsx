@@ -12,8 +12,10 @@ const LOCAL_PREFIX = 'local:';
 
 const AIGuruPage = () => {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([]); // { role, content, createdAt, meta? }
+  const [messages, setMessages] = useState([]); // { role, contentEnglish, contentHindi, createdAt, meta? }
   const [loading, setLoading] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState('english');
+  const [copyStatus, setCopyStatus] = useState('');
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
 
@@ -61,6 +63,26 @@ const AIGuruPage = () => {
       saveHistory(next);
       return next;
     });
+  };
+
+  const getDisplayContent = (message) => {
+    if (!message) return '';
+    if (selectedLanguage === 'hindi' && message.contentHindi) return message.contentHindi;
+    if (selectedLanguage === 'english' && message.contentEnglish) return message.contentEnglish;
+    return message.contentEnglish || message.contentHindi || message.content || '';
+  };
+
+  const copyText = async (text) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyStatus('Copied!');
+      setTimeout(() => setCopyStatus(''), 2000);
+    } catch (err) {
+      console.error('Copy failed:', err);
+      setCopyStatus('Copy failed');
+      setTimeout(() => setCopyStatus(''), 2000);
+    }
   };
 
   useEffect(() => {
@@ -127,7 +149,8 @@ const AIGuruPage = () => {
       }
 
       const data = await res.json();
-      const assistantContent = data.answer || data.reply || 'No answer returned.';
+      const assistantContentEnglish = data.answer_en || data.answer || data.reply || 'No answer returned.';
+      const assistantContentHindi = data.answer_hi || data.answer || data.reply || assistantContentEnglish;
       const assistantMeta = {
         related_raag: data.related_raag || '',
         practice_tip: data.practice_tip || '',
@@ -136,7 +159,8 @@ const AIGuruPage = () => {
 
       const assistantMsg = {
         role: 'assistant',
-        content: assistantContent,
+        contentEnglish: assistantContentEnglish,
+        contentHindi: assistantContentHindi,
         createdAt: Date.now(),
         meta: assistantMeta
       };
@@ -177,9 +201,28 @@ const AIGuruPage = () => {
           <div className="rounded-2xl border border-white/10 bg-[#0d0f14]/90 shadow-[0_24px_80px_rgba(0,0,0,0.45)] overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[86vh]">
               <div className="lg:col-span-9 p-6 md:p-7 flex flex-col border-r border-white/10 h-[86vh]">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-white font-semibold text-lg">Conversation</h2>
-                  <span className="text-xs text-gray-400">Auto-scroll disabled</span>
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                  <div>
+                    <h2 className="text-white font-semibold text-lg">Conversation</h2>
+                    <span className="text-xs text-gray-400">Auto-scroll disabled</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 uppercase tracking-[0.2em]">Read in</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLanguage('english')}
+                      className={`rounded-full px-3 py-1 text-xs font-medium ${selectedLanguage === 'english' ? 'bg-amber-400 text-black' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                    >
+                      English
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLanguage('hindi')}
+                      className={`rounded-full px-3 py-1 text-xs font-medium ${selectedLanguage === 'hindi' ? 'bg-amber-400 text-black' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                    >
+                      Hindi
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-2 pb-2">
@@ -189,34 +232,73 @@ const AIGuruPage = () => {
                     </div>
                   )}
 
-                  {messages.map((m, i) => (
-                    <div key={`${m.createdAt || i}-${i}`} className={`mb-4 flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div
-                        className={`${
-                          m.role === 'user'
-                            ? 'bg-amber-400 text-black'
-                            : 'bg-[#121826] text-gray-100 border border-white/10'
-                        } max-w-[92%] p-4 rounded-xl`}
-                      >
-                        <div className="text-[11px] uppercase tracking-wide mb-2 opacity-70">
-                          {m.role === 'user' ? 'You' : 'AI Guru'}
-                        </div>
-                        <div className="whitespace-pre-wrap leading-7 text-[15px]">{m.content}</div>
-
-                        {m.meta && (
-                          <div className="mt-3 text-sm text-gray-300 bg-black/20 rounded-lg p-3">
-                            {m.meta.related_raag && <div><strong>Raag:</strong> {m.meta.related_raag}</div>}
-                            {m.meta.practice_tip && <div><strong>Practice Tip:</strong> {m.meta.practice_tip}</div>}
-                            {m.meta.difficulty_level && <div><strong>Difficulty:</strong> {m.meta.difficulty_level}</div>}
+                  {messages.map((m, i) => {
+                    const displayContent = getDisplayContent(m);
+                    const hasBothLanguages = m.contentEnglish && m.contentHindi && m.contentEnglish !== m.contentHindi;
+                    return (
+                      <div key={`${m.createdAt || i}-${i}`} className={`mb-4 flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div
+                          className={`${
+                            m.role === 'user'
+                              ? 'bg-amber-400 text-black'
+                              : 'bg-[#121826] text-gray-100 border border-white/10'
+                          } max-w-[92%] p-4 rounded-xl`}
+                        >
+                          <div className="flex items-center justify-between mb-2 gap-3">
+                            <div className="text-[11px] uppercase tracking-wide opacity-70">
+                              {m.role === 'user' ? 'You' : 'AI Guru'}
+                            </div>
+                            {m.role !== 'user' && (
+                              <div className="flex items-center gap-2 text-[11px] text-gray-300">
+                                {hasBothLanguages && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedLanguage('english')}
+                                      className={`rounded-full px-2 py-1 ${selectedLanguage === 'english' ? 'bg-amber-400 text-black' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                                    >
+                                      English
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedLanguage('hindi')}
+                                      className={`rounded-full px-2 py-1 ${selectedLanguage === 'hindi' ? 'bg-amber-400 text-black' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                                    >
+                                      Hindi
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => copyText(displayContent)}
+                                  className="rounded-full px-2 py-1 bg-white/5 text-gray-300 hover:bg-white/10"
+                                >
+                                  Copy
+                                </button>
+                              </div>
+                            )}
                           </div>
-                        )}
+                          <div className="whitespace-pre-wrap leading-7 text-[15px]">{displayContent}</div>
 
-                        <div className="mt-2 text-[11px] opacity-60">
-                          {new Date(m.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {copyStatus && m.role !== 'user' && (
+                            <div className="mt-2 text-[11px] text-emerald-300">{copyStatus}</div>
+                          )}
+
+                          {m.meta && (
+                            <div className="mt-3 text-sm text-gray-300 bg-black/20 rounded-lg p-3">
+                              {m.meta.related_raag && <div><strong>Raag:</strong> {m.meta.related_raag}</div>}
+                              {m.meta.practice_tip && <div><strong>Practice Tip:</strong> {m.meta.practice_tip}</div>}
+                              {m.meta.difficulty_level && <div><strong>Difficulty:</strong> {m.meta.difficulty_level}</div>}
+                            </div>
+                          )}
+
+                          <div className="mt-2 text-[11px] opacity-60">
+                            {new Date(m.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="mt-4 border-t border-white/10 pt-4 sticky bottom-0 bg-[#0d0f14]/95 backdrop-blur-sm">
@@ -265,7 +347,7 @@ const AIGuruPage = () => {
                   {messages.slice().reverse().map((m, i) => (
                     <li key={`side-${m.createdAt || i}-${i}`} className="text-sm text-gray-300 border-b border-white/5 pb-2">
                       <strong className="block text-xs text-gray-400 mb-1">{m.role === 'user' ? 'You' : 'AI Guru'}</strong>
-                      <div className="max-h-10 overflow-hidden">{m.content}</div>
+                      <div className="max-h-10 overflow-hidden">{getDisplayContent(m)}</div>
                     </li>
                   ))}
                 </ul>
