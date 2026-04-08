@@ -199,8 +199,8 @@ const AIGuruPage = () => {
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-[#0d0f14]/90 shadow-[0_24px_80px_rgba(0,0,0,0.45)] overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[86vh]">
-              <div className="lg:col-span-9 p-6 md:p-7 flex flex-col border-r border-white/10 h-[86vh]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[92vh]">
+              <div className="lg:col-span-9 p-6 md:p-7 flex flex-col border-r border-white/10 h-[92vh]">
                 <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                   <div>
                     <h2 className="text-white font-semibold text-lg">Conversation</h2>

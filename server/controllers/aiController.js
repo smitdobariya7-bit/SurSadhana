@@ -165,8 +165,8 @@ const formatResponse = (content) => {
     .replace(/^\s+|\s+$/g, '') // Trim whitespace
     .replace(/\n\s*\n/g, '\n\n'); // Consistent paragraph spacing
 
-  // Ensure bullet points have proper spacing
-  formatted = formatted.replace(/(\n?)(•|\*|\-)\s*/g, '\n• ');
+  // Ensure bullet points have proper spacing using hyphen style for cleaner display
+  formatted = formatted.replace(/(\n?)(•|\*|\-)\s*/g, '\n- ');
 
   // Ensure numbered lists have proper spacing
   formatted = formatted.replace(/(\n?)(\d+\.)\s*/g, '\n$2 ');
