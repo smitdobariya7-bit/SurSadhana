@@ -1,7 +1,7 @@
 export const getApiBaseUrl = () => {
   const envUrl = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL;
   if (typeof envUrl === 'string' && envUrl.trim().length > 0) {
-    const normalized = envUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
+    const normalized = envUrl.trim().replace(/\/?api\/?$/, '').replace(/\/$/, '');
     return normalized;
   }
 
