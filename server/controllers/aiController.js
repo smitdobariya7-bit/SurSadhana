@@ -159,8 +159,11 @@ const parseModelJson = (text) => {
 const formatResponse = (content) => {
   if (!content) return content;
 
-  // Clean up the response for better readability
+  // Replace escaped newline/tab sequences from the model with real whitespace
   let formatted = content
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '')
+    .replace(/\\t/g, ' ')
     // Remove excessive whitespace
     .replace(/\n{4,}/g, '\n\n\n')
     .replace(/^\s+|\s+$/g, '')
@@ -306,13 +309,23 @@ Special Features for Music Questions:
 - Give personalized practice tips
 
 For Bilingual Responses:
-If the user would benefit from both languages, provide the response in both English and Hindi naturally within the same response, clearly separated.
+Always return output as a valid JSON object with exactly two keys:
+{
+  "english": "...",
+  "hindi": "..."
+}
+Use actual new lines inside the text values, not literal backslash sequences like \n or \n\n.
+The English answer should be clear, simple, and easy to read.
+The Hindi answer should be natural and accurate in Hindi.
+If the question is in Hindi, make sure the Hindi text is especially strong.
+If the question is in English, the Hindi text should still be a good Hindi translation.
+Do not add any extra text outside the JSON object.
 
 User question: "${question}"
 Language context: ${languageHint}
 Requested language: ${requestedLanguage || 'auto-detect'}
 
-Provide a comprehensive, engaging, and helpful response:
+Provide a full, well-structured, engaging answer in both English and Hindi:
 `.trim();
 
 export const askAI = async (req, res) => {
@@ -358,23 +371,24 @@ export const askAI = async (req, res) => {
     }
 
     const content = completion.choices[0].message.content;
-    const formattedContent = formatResponse(content);
+    const parsed = parseModelJson(content);
 
-    // For bilingual responses, try to extract both versions if available
-    // Otherwise, provide the same content for both languages
-    let answerEn = formattedContent;
-    let answerHi = formattedContent;
+    let answerEn = null;
+    let answerHi = null;
+    let formattedContent = '';
 
-    // Simple heuristic: if response contains both English and Hindi text,
-    // try to split them. Otherwise, use the same content.
-    const lines = formattedContent.split('\n');
-    const hindiLines = lines.filter(line => /[\u0900-\u097F]/.test(line));
-    const englishLines = lines.filter(line => !/[\u0900-\u097F]/.test(line) && line.trim());
-
-    if (hindiLines.length > 0 && englishLines.length > 0) {
-      answerEn = englishLines.join('\n');
-      answerHi = hindiLines.join('\n');
+    if (parsed && (typeof parsed.english === 'string' || typeof parsed.hindi === 'string')) {
+      answerEn = parsed.english ? formatResponse(parsed.english) : null;
+      answerHi = parsed.hindi ? formatResponse(parsed.hindi) : null;
+      formattedContent = answerEn || answerHi || '';
+    } else {
+      formattedContent = formatResponse(content);
+      answerEn = formattedContent;
+      answerHi = formattedContent;
     }
+
+    if (!answerEn) answerEn = formattedContent;
+    if (!answerHi) answerHi = formattedContent;
 
     return res.json({
       reply: formattedContent,
