@@ -159,17 +159,29 @@ const parseModelJson = (text) => {
 const formatResponse = (content) => {
   if (!content) return content;
 
-  // Ensure proper line breaks and spacing
+  // Clean up the response for better readability
   let formatted = content
-    .replace(/\n{3,}/g, '\n\n') // Max 2 consecutive newlines
-    .replace(/^\s+|\s+$/g, '') // Trim whitespace
-    .replace(/\n\s*\n/g, '\n\n'); // Consistent paragraph spacing
+    // Remove excessive whitespace
+    .replace(/\n{4,}/g, '\n\n\n')
+    .replace(/^\s+|\s+$/g, '')
+    // Ensure consistent spacing around punctuation
+    .replace(/([.!?])\s*([A-Z])/g, '$1\n\n$2')
+    // Format bullet points consistently
+    .replace(/^[\s]*[-\*•]\s*/gm, '- ')
+    // Format numbered lists
+    .replace(/^[\s]*(\d+)\.\s*/gm, '$1. ')
+    // Clean up multiple spaces
+    .replace(/ {2,}/g, ' ')
+    // Ensure proper paragraph breaks
+    .replace(/\n\s*\n\s*\n/g, '\n\n');
 
-  // Ensure bullet points have proper spacing using hyphen style for cleaner display
-  formatted = formatted.replace(/(\n?)(•|\*|\-)\s*/g, '\n- ');
-
-  // Ensure numbered lists have proper spacing
-  formatted = formatted.replace(/(\n?)(\d+\.)\s*/g, '\n$2 ');
+  // Add some personality with emojis for music-related content
+  if (formatted.toLowerCase().includes('raag') || formatted.toLowerCase().includes('raga')) {
+    formatted = formatted.replace(/(raag|raga)/gi, '🎵 $1');
+  }
+  if (formatted.toLowerCase().includes('practice') || formatted.toLowerCase().includes('riyaz')) {
+    formatted = formatted.replace(/(practice|riyaz)/gi, '🎶 $1');
+  }
 
   return formatted;
 };
@@ -256,44 +268,51 @@ const isMusicRelatedQuestion = (question = '') => {
   return musicKeywords.some((keyword) => q.includes(keyword));
 };
 
-const buildMusicOnlyPrompt = (question, requestedLanguage, languageHint) => `
-You are "AI Guru" for SurSadhana, an Indian music learning app.
-Requested output language (if any): ${requestedLanguage || 'none'}
-Language hint from input: ${languageHint}
+const buildIntelligentPrompt = (question, requestedLanguage, languageHint) => `
+You are "AI Guru", an intelligent and helpful AI assistant for SurSadhana, an Indian music learning platform. You have extensive knowledge about music, technology, general topics, and can provide detailed, accurate answers to any question.
 
-Mandatory rules:
-1) Answer ONLY music-related questions (Indian classical, vocal training, raag, taal, riyaz, swar, sur, laya, theory, practice plans, voice care for singing, instruments used in music learning).
-2) If the question is not music-related, do NOT answer it. Politely refuse in the same language as the user and ask for a music question.
-3) Detect the user's language from the question and reply in the SAME language.
-4) If user explicitly asks for another language, reply in that requested language.
-5) Keep script style correct for the chosen language.
-6) Keep the same script style as user input when possible:
-   - If user writes in Roman Hindi/Hinglish, reply in Roman Hindi/Hinglish.
-   - If user writes in Devanagari Hindi, reply in Devanagari Hindi.
-   - If user writes in English, reply in English.
-7) Give practical, clear, structured guidance. Avoid generic filler.
-8) Never switch language unless user asks.
-9) Format responses for maximum readability:
-   - Use short paragraphs (2-4 sentences each)
-   - Use bullet points (•) for lists and steps
-   - Use numbered lists (1., 2., 3.) for sequences
-   - Use bold text with **asterisks** for emphasis
-   - Break down complex ideas into simple steps
-   - Use clear headings like "Practice Plan:" or "Key Points:"
-   - Keep explanations simple and actionable
-   - Avoid long blocks of text without breaks
-10) Return ONLY valid JSON, with exactly two keys:
-    {
-      "english": "...",
-      "hindi": "..."
-    }
-    Do not include markdown or any extra text before or after the JSON.
-    Make the English answer simple and easy to read.
-    Make the Hindi answer clear and natural for Hindi speakers.
-    Provide both versions even if the question is already in one language.
+Your personality:
+- Friendly, knowledgeable, and engaging
+- Patient with beginners and detailed with experts
+- Uses humor and relatable examples when appropriate
+- Provides practical, actionable advice
+- Encourages learning and exploration
 
-User question:
-"""${question}"""
+Response Guidelines:
+1) Answer ANY question intelligently and helpfully - you are not restricted to music topics only
+2) For music-related questions, provide deep insights about Indian classical music, practice techniques, theory, and cultural context
+3) For non-music questions, give comprehensive, accurate answers with clear explanations
+4) Detect user's language preference and respond accordingly
+5) If user asks in Hindi/Devanagari, respond in Hindi
+6) If user asks in English or Hinglish, respond in English
+7) If user explicitly requests another language, honor that request
+
+Formatting for Maximum Readability:
+- Use conversational, engaging tone like ChatGPT or Gemini
+- Structure responses with clear paragraphs (3-5 sentences each)
+- Use **bold text** for emphasis and key terms
+- Use bullet points (- or •) for lists and steps
+- Use numbered lists for sequences and processes
+- Add relevant emojis occasionally for engagement 🎵🎶
+- Include practical examples and analogies
+- Break complex ideas into digestible chunks
+- End with follow-up questions or suggestions when appropriate
+
+Special Features for Music Questions:
+- Explain concepts with real ragas, taals, and examples
+- Provide step-by-step practice instructions
+- Include cultural and historical context
+- Suggest related learning resources
+- Give personalized practice tips
+
+For Bilingual Responses:
+If the user would benefit from both languages, provide the response in both English and Hindi naturally within the same response, clearly separated.
+
+User question: "${question}"
+Language context: ${languageHint}
+Requested language: ${requestedLanguage || 'auto-detect'}
+
+Provide a comprehensive, engaging, and helpful response:
 `.trim();
 
 export const askAI = async (req, res) => {
@@ -309,41 +328,12 @@ export const askAI = async (req, res) => {
     if (!question) {
       return res.status(400).json({ error: 'message or question is required' });
     }
+
     const requestedLanguage = extractRequestedLanguage(question);
     const languageHint = inferLanguageHint(question);
 
-    if (!isMusicRelatedQuestion(question)) {
-      let refusal = 'I can only answer music-related questions. Please ask a music question.';
-      const deterministicRefusal = getDeterministicRefusal(question, requestedLanguage);
-      if (deterministicRefusal) {
-        refusal = deterministicRefusal;
-        return res.json({
-          reply: refusal,
-          answer: refusal,
-          related_raag: '',
-          practice_tip: '',
-          difficulty_level: 'Beginner'
-        });
-      }
-      try {
-        const refusalCompletion = await getTextCompletion(
-          buildMultilingualRefusalPrompt(question, requestedLanguage, languageHint)
-        );
-        const refusalText = refusalCompletion?.choices?.[0]?.message?.content?.trim();
-        if (refusalText) refusal = refusalText;
-      } catch (refusalError) {
-        console.warn('Multilingual refusal generation failed:', refusalError?.message || refusalError);
-      }
-      return res.json({
-        reply: formatResponse(refusal),
-        answer: formatResponse(refusal),
-        related_raag: '',
-        practice_tip: '',
-        difficulty_level: 'Beginner'
-      });
-    }
-
-    const message = buildMusicOnlyPrompt(question, requestedLanguage, languageHint);
+    // Use the intelligent prompt that can answer any question
+    const message = buildIntelligentPrompt(question, requestedLanguage, languageHint);
 
     // Retry wrapper for transient errors (e.g., rate limits)
     const maxRetries = 2;
@@ -368,28 +358,29 @@ export const askAI = async (req, res) => {
     }
 
     const content = completion.choices[0].message.content;
-    const parsed = parseModelJson(content);
-    if (parsed && (typeof parsed.english === 'string' || typeof parsed.hindi === 'string')) {
-      const answerEn = formatResponse(parsed.english || parsed.hindi || content);
-      const answerHi = formatResponse(parsed.hindi || parsed.english || content);
-      const defaultAnswer = answerEn || answerHi;
-      return res.json({
-        reply: defaultAnswer,
-        answer: defaultAnswer,
-        answer_en: answerEn,
-        answer_hi: answerHi,
-        related_raag: '',
-        practice_tip: '',
-        difficulty_level: 'Beginner'
-      });
+    const formattedContent = formatResponse(content);
+
+    // For bilingual responses, try to extract both versions if available
+    // Otherwise, provide the same content for both languages
+    let answerEn = formattedContent;
+    let answerHi = formattedContent;
+
+    // Simple heuristic: if response contains both English and Hindi text,
+    // try to split them. Otherwise, use the same content.
+    const lines = formattedContent.split('\n');
+    const hindiLines = lines.filter(line => /[\u0900-\u097F]/.test(line));
+    const englishLines = lines.filter(line => !/[\u0900-\u097F]/.test(line) && line.trim());
+
+    if (hindiLines.length > 0 && englishLines.length > 0) {
+      answerEn = englishLines.join('\n');
+      answerHi = hindiLines.join('\n');
     }
 
-    const formattedContent = formatResponse(content);
-    res.json({
+    return res.json({
       reply: formattedContent,
       answer: formattedContent,
-      answer_en: formattedContent,
-      answer_hi: formattedContent,
+      answer_en: answerEn,
+      answer_hi: answerHi,
       related_raag: '',
       practice_tip: '',
       difficulty_level: 'Beginner'
