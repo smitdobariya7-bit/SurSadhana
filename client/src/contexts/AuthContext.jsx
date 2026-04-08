@@ -1,7 +1,21 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getApiBaseUrl, getApiBaseUrlError } from '@/lib/apiBaseUrl';
+import { getApiBaseUrl } from '@/lib/apiBaseUrl';
 
 const AuthContext = createContext();
+
+const parseJsonSafely = async (response) => {
+  const contentType = response.headers.get('content-type') || '';
+  const text = await response.text();
+  if (!contentType.includes('application/json')) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    return null;
+  }
+};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -54,10 +68,14 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        const userData = data.user || data; // /auth/me returns user directly, while /login returns { user, token }
-        setUser(userData);
-        localStorage.setItem('sursadhana_token', token);
+        const data = await parseJsonSafely(response);
+        if (data) {
+          const userData = data.user || data; // /auth/me returns user directly, while /login returns { user, token }
+          setUser(userData);
+          localStorage.setItem('sursadhana_token', token);
+        } else {
+          localStorage.removeItem('sursadhana_token');
+        }
       } else {
         localStorage.removeItem('sursadhana_token');
       }
@@ -70,11 +88,6 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (email, password, name) => {
     try {
-      const configError = getApiBaseUrlError();
-      if (configError) {
-        throw new Error(configError);
-      }
-
       const base = getApiBaseUrl();
       const response = await fetch(`${base}/api/auth/register`, {
         method: 'POST',
@@ -84,11 +97,11 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password, name })
       });
 
-      const data = await response.json();
+      const data = await parseJsonSafely(response);
 
-      if (!response.ok) {
+      if (!response.ok || !data) {
         const users = getLocalUsers();
-        if (users[email]) throw new Error(data.error || 'Registration failed');
+        if (users[email]) throw new Error(data?.error || 'Registration failed');
         users[email] = { name, pass: password, level: 'beginner' };
         saveLocalUsers(users);
         const token = `${LOCAL_PREFIX}${email}`;
@@ -107,11 +120,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const configError = getApiBaseUrlError();
-      if (configError) {
-        throw new Error(configError);
-      }
-
       const base = getApiBaseUrl();
       const response = await fetch(`${base}/api/auth/login`, {
         method: 'POST',
@@ -121,12 +129,12 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
+      const data = await parseJsonSafely(response);
 
-      if (!response.ok) {
+      if (!response.ok || !data) {
         const users = getLocalUsers();
         const u = users[email];
-        if (!u || u.pass !== password) throw new Error(data.error || 'Login failed');
+        if (!u || u.pass !== password) throw new Error(data?.error || 'Login failed');
         const token = `${LOCAL_PREFIX}${email}`;
         setUser({ email, name: u.name, level: u.level || 'beginner' });
         localStorage.setItem('sursadhana_token', token);
